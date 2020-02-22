@@ -5,6 +5,33 @@
 #include "harness.h"
 #include "queue.h"
 
+bool check_malloc(void *mem)
+{
+    if (!mem) {
+        perror("malloc failed");
+        return false;
+    }
+    return true;
+}
+
+bool check_queue(queue_t *q)
+{
+    if (!q) {
+        printf("the queue is null\n");
+        return false;
+    }
+    return true;
+}
+
+void free_node(list_ele_t **node)
+{
+    if (*node) {
+        free((*node)->value);
+        free(*node);
+        *node = NULL;
+    }
+}
+
 /*
  * Create empty queue.
  * Return NULL if could not allocate space.
@@ -12,17 +39,40 @@
 queue_t *q_new()
 {
     queue_t *q = malloc(sizeof(queue_t));
-    /* TODO: What if malloc returned NULL? */
+    if (check_malloc(q))
+        return NULL;
     q->head = NULL;
+    q->tail = NULL;
+    q->size = 0;
     return q;
 }
 
 /* Free all storage used by queue */
 void q_free(queue_t *q)
 {
-    /* TODO: How about freeing the list elements and the strings? */
-    /* Free queue structure */
+    list_ele_t **trav = &q->head;
+    while (*trav) {
+        list_ele_t *temp = *trav;
+        trav = &(*trav)->next;
+        free_node(&temp);
+    }
     free(q);
+}
+
+list_ele_t *create_node(char *s)
+{
+    list_ele_t *new_node = malloc(sizeof(list_ele_t));
+    if (!check_malloc(new_node))
+        return NULL;
+
+    size_t len = strlen(s);
+    new_node->value = malloc(len + 1);
+    if (!check_malloc(new_node->value))
+        return NULL;
+    memset(new_node->value, '\0', len);
+    memcpy(new_node->value, s, len);
+    new_node->next = NULL;
+    return new_node;
 }
 
 /*
@@ -34,12 +84,15 @@ void q_free(queue_t *q)
  */
 bool q_insert_head(queue_t *q, char *s)
 {
+    if (!check_queue(q))
+        return false;
+
     list_ele_t *newh;
-    /* TODO: What should you do if the q is NULL? */
-    newh = malloc(sizeof(list_ele_t));
-    /* Don't forget to allocate space for the string and copy it */
-    /* What if either call to malloc returns NULL? */
+    if (!(newh = create_node(s)))
+        return false;
     newh->next = q->head;
+    if (!q->head)
+        q->tail = newh;
     q->head = newh;
     return true;
 }
@@ -53,9 +106,14 @@ bool q_insert_head(queue_t *q, char *s)
  */
 bool q_insert_tail(queue_t *q, char *s)
 {
-    /* TODO: You need to write the complete code for this function */
-    /* Remember: It should operate in O(1) time */
-    /* TODO: Remove the above comment when you are about to implement. */
+    if (!check_queue(q))
+        return false;
+
+    list_ele_t *newt;
+    if (!(newt = create_node(s)))
+        return false;
+    q->tail->next = newt;
+    q->tail = newt;
     return false;
 }
 
@@ -69,9 +127,15 @@ bool q_insert_tail(queue_t *q, char *s)
  */
 bool q_remove_head(queue_t *q, char *sp, size_t bufsize)
 {
-    /* TODO: You need to fix up this code. */
-    /* TODO: Remove the above comment when you are about to implement. */
+    if (!q || !q->head)
+        return false;
+    list_ele_t *target = q->head;
+    strncpy(sp, target->value, bufsize - 1);
+    sp[bufsize - 1] = '\0';
+
     q->head = q->head->next;
+    --q->size;
+    free_node(&target);
     return true;
 }
 
@@ -81,10 +145,9 @@ bool q_remove_head(queue_t *q, char *sp, size_t bufsize)
  */
 int q_size(queue_t *q)
 {
-    /* TODO: You need to write the code for this function */
-    /* Remember: It should operate in O(1) time */
-    /* TODO: Remove the above comment when you are about to implement. */
-    return 0;
+    if (check_queue(q))
+        return 0;
+    return q->size;
 }
 
 /*
